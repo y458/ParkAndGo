@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <title>Place Autocomplete</title>
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+        <meta charset="utf-8">
+        <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+        <link rel="stylesheet" href="../../../assets/bootstrap/css/bootstrap.min.css">
+
+        <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+        <style>
+            /* Always set the map height explicitly to define the size of the div
+* element that contains the map. */
+            #map {
+                height: 100%;
+            }
+
+            /* Optional: Makes the sample page fill the window. */
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #description {
+                font-family: Roboto;
+                font-size: 15px;
+                font-weight: 300;
+            }
+
+            #infowindow-content .title {
+                font-weight: bold;
+            }
+
+            #infowindow-content {
+                display: none;
+            }
+
+            #map #infowindow-content {
+                display: inline;
+            }
+
+            .pac-card {
+                margin: 10px 10px 0 0;
+                border-radius: 2px 0 0 2px;
+                box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                outline: none;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                background-color: #fff;
+                font-family: Roboto;
+            }
+
+            #pac-container {
+                padding-bottom: 0px;
+                margin-right: 0px;
+            }
+
+            .pac-controls {
+                display: inline-block;
+                padding: 5px 11px;
+            }
+
+            .pac-controls label {
+                font-family: Roboto;
+                font-size: 13px;
+                font-weight: 300;
+            }
+
+            /*            #pac-input {
+                            background-color: #fff;
+                            font-family: Roboto;
+                            font-size: 15px;
+                            font-weight: 300;
+                            margin-left: 12px;
+                            padding: 0 11px 0 13px;
+                            text-overflow: ellipsis;
+                            width: 400px;
+                        }
+            
+                        #pac-input:focus {
+                            border-color: #4d90fe;
+                        }*/
+
+            #pac-input {
+                background-color: #fff;
+                font-family: Roboto;
+                font-size: 15px;
+                font-weight: 300;
+                margin-left: 0px;
+                padding: 0 11px 0 13px;
+                text-overflow: ellipsis;
+                width: 400px;
+            }
+
+            #pac-input:focus {
+                border-color: #4d90fe;
+            }
+
+            #title {
+                color: #fff;
+                background-color: #4d90fe;
+                font-size: 25px;
+                font-weight: 500;
+                padding: 6px 12px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="pac-card" id="pac-card">
+            <div>
+            </div>
+            <!--<div id="pac-container">-->
+            <!--                <input class="form-control"  id="pac-input" type="text" placeholder="Enter a location">
+                            <span style="margin-top: 55px; color: black;">
+                            </span>-->
+
+            <div id="pac-container" class="row" style="width: 400px">
+                <div class="col-11 p-0 m-0">
+                    <input class="form-control" id="pac-input" type="text" style="width: 100%" placeholder="Enter a location">
+
+                </div>
+                <div class="col-1 p-0 m-0">
+                    <button class="btn btn-light" id="geo"><i class="fa fa-bullseye" aria-hidden="true"></i></button>
+
+                </div>
+            </div>
+            <!--</div>-->
+        </div>
+        <div id="map" class="rounded"></div>
+        <div id="infowindow-content">
+            <img src="" width="16" height="16" id="place-icon">
+            <span id="place-name" class="title"></span><br>
+            <span id="place-address"></span>
+
+        </div>
+
+        <script>
+            // This example requires the Places library. Include the libraries=places
+            // parameter when you first load the API. For example:
+            var map, infoWindow;
+            function initMap() {
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: {lat: 37.9715323, lng: 23.7257492},
+                    zoom: 10
+                });
+                infoWindow = new google.maps.InfoWindow;
+
+                var card = document.getElementById('pac-card');
+                var input = document.getElementById('pac-input');
+                var types = document.getElementById('type-selector');
+                var strictBounds = document.getElementById('strict-bounds-selector');
+                map.controls[google.maps.ControlPosition.TOP_RIGHT].push(card);
+                var autocomplete = new google.maps.places.Autocomplete(input);
+                // Bind the map's bounds (viewport) property to the autocomplete object,
+                // so that the autocomplete requests use the current map bounds for the
+                // bounds option in the request.
+                autocomplete.bindTo('bounds', map);
+                // Set the data fields to return when the user selects a place.
+                autocomplete.setFields(
+                        ['address_components', 'geometry', 'icon', 'name']);
+                var infowindow = new google.maps.InfoWindow();
+                var infowindowContent = document.getElementById('infowindow-content');
+                infowindow.setContent(infowindowContent);
+                var marker = new google.maps.Marker({
+                    map: map,
+                    anchorPoint: new google.maps.Point(0, -29)
+                });
+                autocomplete.addListener('place_changed', function () {
+                    infowindow.close();
+                    marker.setVisible(false);
+                    var place = autocomplete.getPlace();
+                    if (!place.geometry) {
+                        // User entered the name of a Place that was not suggested and
+                        // pressed the Enter key, or the Place Details request failed.
+                        window.alert("No details available for input: '" + place.name + "'");
+                        return;
+                    }
+                    // If the place has a geometry, then present it on a map.
+                    if (place.geometry.viewport) {
+                        map.fitBounds(place.geometry.viewport);
+                    } else {
+                        map.setCenter(place.geometry.location);
+                        map.setZoom(17);  // Why 17? Because it looks good.
+                    }
+                    marker.setPosition(place.geometry.location);
+
+                });
+
+                var infowindow = new google.maps.InfoWindow();
+
+
+                //-------------------------------------------- Adds Marker
+
+                var InforObj = [];
+                const URL = "/getAvailableGarages";
+                const settings = {
+                    url: URL,
+                    success: handleSuccess
+                };
+
+                var markers = [];
+                $.ajax(settings);
+                function handleSuccess(data) {
+                    window.parent.document.querySelector("#maxPph").addEventListener("change", function () {
+                        filter();
+
+                    });
+                    window.parent.document.querySelector("#minPph").addEventListener("change", function () {
+                        filter();
+
+                    });
+                    function filter() {
+                        window.parent.document.querySelector("#minPph").setAttribute("max", window.parent.document.querySelector("#maxPph").value);
+                        if (window.parent.document.querySelector("#minPph").value > window.parent.document.querySelector("#maxPph").value) {
+
+                            window.parent.document.querySelector("#minPph").value = window.parent.document.querySelector("#maxPph").value;
+                        }
+                        for (var i = 0; i < markers.length; i++) {
+                            markers[i].setMap(null);
+
+                        }
+                        markers = [];
+                        data.forEach(obj => {
+                            if (obj.rentalPriceperhour <= window.parent.document.querySelector("#maxPph").value &&
+                                    obj.rentalPriceperhour >= window.parent.document.querySelector("#minPph").value) {
+                                showMarkers(obj);
+                            }
+
+                        });
+                    }
+
+                    data.forEach(obj => {
+                        showMarkers(obj);
+                    });
+                }
+                ;
+
+
+
+
+
+                function showMarkers(obj) {
+                    let contentString = obj.rentalGarageid.garageAddress;
+                    var marker = new google.maps.Marker({
+
+                        position: {lat: parseFloat(obj.rentalGarageid.garageLatitude), lng: parseFloat(obj.rentalGarageid.garageLongtitude)}, //lat,long
+                        map: map,
+                        title: obj.rentalGarageid.garageAddress,
+                        garage: obj
+                    });
+                    markers.push(marker);
+
+                    marker.addListener('click', function () {
+
+
+                        //--------------------- with this to display details under the map for the selected 
+                        //--------------------- garage with an ajax call for reviews
+                        window.parent.$('#garageInfo').fadeOut();
+
+
+                        window.parent.document.querySelector("#garageInfo").innerHTML = `
+                            </br><h3>${this.garage.rentalGarageid.garageAddress}</h3>
+                            <br/><a data-fancybox data-type="iframe" data-src="showGarageReviews/${this.garage.rentalGarageid.garageId}" href="javascript:;">Show reviews</a>
+                                `;
+                        $.ajax({
+                            url: "/garageRentals/" + this.garage.rentalGarageid.garageId,
+                            type: "POST"
+
+                        }).done(function (data) {
+                            data.forEach(elem => {
+
+                                let startDate = new Date(elem.rentalStart);
+                                let endDate = new Date(elem.rentalEnd);
+                                let formatted_startdate = startDate.getDate() + "-" + (startDate.getMonth() + 1) + "-" + startDate.getFullYear() + " " + startDate.getHours() + ":" + startDate.getMinutes() + ":" + startDate.getSeconds()
+                                let formatted_enddate = endDate.getDate() + "-" + (endDate.getMonth() + 1) + "-" + endDate.getFullYear() + " " + endDate.getHours() + ":" + endDate.getMinutes() + ":" + endDate.getSeconds();
+
+                                if (elem.rentalUserid === null) {
+
+//                                        $("#garageInfo").text(txt).fadeIn('slow');
+//                                        
+//                                        $('#garageInfo', window.parent.document).html();
+//                                        
+
+                                    window.parent.document.querySelector("#garageInfo").innerHTML +=
+                                            "<div class='border border-primary rounded bg-light'>\n\
+                        </br> <p class='mbr-fonts-style display-5' style='color:#d50c0c'>Available</p> <b>From:</b> " + formatted_startdate + "</br><b>To:</b> " + formatted_enddate + "</br><b> at " + elem.rentalPriceperhour + "$ per hour </b>\n\
+                                        <p><button onClick='rentalRent(" + elem.rentalId + ")' class='btn btn-primary btn-form display-4'>choose this one</button></p> </div> ";
+
+                                    window.parent.$('#garageInfo').fadeIn();
+
+                                }
+
+
+                            });
+
+                        });
+
+                        //---------------------
+
+                    });
+                }
+
+                function closeOtherInfo() {
+                    if (InforObj.length > 0) {
+                        InforObj[0].set("marker", null);
+                        InforObj[0].close();
+                        InforObj.length = 0;
+                    }
+                }
+                ;
+
+                //--------------------------------------------
+            }
+
+
+            $('#geo').on('click', function () {
+
+                // Try HTML5 geolocation.
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        var pos = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+
+                        infoWindow.setPosition(pos);
+                        infoWindow.setContent('Location found.');
+                        map.setCenter(pos);
+                        map.setZoom(12);
+                    }, function () {
+                        handleLocationError(true, infoWindow, map.getCenter());
+                    });
+                } else {
+                    // Browser doesn't support Geolocation
+                    handleLocationError(false, infoWindow, map.getCenter());
+                }
+
+
+                function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+                    infoWindow.setPosition(pos);
+                    infoWindow.setContent(browserHasGeolocation ?
+                            'Error: The Geolocation service failed.' :
+                            'Error: Your browser doesn\'t support geolocation.');
+                    infoWindow.open(map);
+                }
+
+
+            });
+
+
+        </script>
+
+        <script
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA2jIaoEKQV45vIJjLC6WYE_hH8c4SbTc8&libraries=places&callback=initMap"
+        async defer></script>
+    </body>
+
+</html>
